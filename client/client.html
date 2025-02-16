@@ -1,13 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <title>Our simple HTTP server</title>
   <link rel="stylesheet" type="text/css" href="/style.css">
-  
-  <script>
 
+  <script>
+   const handleResponse = async (response) => {
+      const content = document.getElementById('content');
+
+      switch (response.status) {
+        case 200:
+          content.innerHTML = `<b>Success</b>`;
+          break;
+        case 201:
+          content.innerHTML = `<b>Created</b>`;
+          break;
+        case 204:
+          content.innerHTML = `<b>Updated (No Content)</b>`;
+          return;
+        case 400:
+          content.innerHTML = `<b>Bad Request</b>`;
+          break;
+        case 404:
+          content.innerHTML = `<b>Not Found</b>`;
+          break;
+        default:
+          content.innerHTML = `<p>Status Code Not Implemented By Client</p>`;
+          break;
+      }
+
+      if (response.status !== 204 && response.headers.get("content-type")?.includes("application/json")) {
+        try {
+          const resObj = await response.json();
+          console.log(resObj);
+          if (resObj.message && resObj.id) {
+            content.innerHTML += `<p><strong>Error:</strong> ${resObj.message} (ID: ${resObj.id})</p>`;
+          } else {
+            content.innerHTML += `<p>${JSON.stringify(resObj)}</p>`;
+          }
+        } catch (error) {
+          console.warn("No valid JSON response", error);
+        }
+      }
+    };
+
+    const sendFetchGet = async () => {
+      try {
+        console.log("sendFetchGet() triggered!");
+        const page = document.getElementById('urlField').value;
+        const reqMethod = document.getElementById('methodSelect').value;
+
+        console.log(`Sending ${reqMethod} request to ${page}`);
+
+        let response = await fetch(page, { method: reqMethod });
+
+        if (reqMethod === "HEAD") {
+          console.log("HEAD request does not return a body.");
+          return;
+        }
+
+        handleResponse(response);
+      } catch (error) {
+        console.error("Error in sendFetchGet:", error);
+      }
+    };
+
+    const sendFetchAdd = async () => {
+      try {
+        console.log("sendFetchAdd() triggered!");
+        const page = "/addUser";
+        const name = document.getElementById('nameField').value;
+        const age = document.getElementById('ageField').value;
+
+
+        console.log(`Sending POST request to ${page}`);
+
+        let response = await fetch(page, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, age }),
+        });
+
+        handleResponse(response);
+      } catch (error) {
+        console.error("Error in sendFetchAdd:", error);
+      }
+    };
+
+    const init = () => {
+      document.getElementById('userForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        sendFetchGet();
+      });
+
+      document.getElementById('nameForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        sendFetchAdd();
+      });
+    };
+
+    window.onload = init;
   </script>
 </head>
+
 <body>
   <section id="top">
     <h3>POST Status Code Tests</h3>
@@ -15,7 +113,7 @@
       <label for="name">Name: </label>
       <input id="nameField" type="text" name="name" />
       <label for="age">Age: </label>
-      <input id="ageField" type="number" name="age" min="0" max="100" step="1"/>
+      <input id="ageField" type="number" name="age" min="0" max="100" step="1" />
       <input type="submit" value="Add User" />
     </form>
     <form id="userForm" action="/getUsers" method="get">
@@ -24,8 +122,8 @@
         <option value='/notReal'>/notReal</option>
       </select>
       <select id="methodSelect">
-        <option value="get">GET</option>
-        <option value="head">HEAD</option>
+        <option value="GET">GET</option>
+        <option value="HEAD">HEAD</option>
       </select>
       <input type="submit" value="Get User" />
     </form>
@@ -33,4 +131,5 @@
   <section id="content">
   </section>
 </body>
+
 </html>
